@@ -1,0 +1,4 @@
+fra/
+.vscode/
+__pycache__/
+courses.sqlite
