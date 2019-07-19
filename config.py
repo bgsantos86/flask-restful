@@ -1,0 +1,4 @@
+DEBUG = True
+HOST = '0.0.0.0'
+PORT = '8000'
+SECRET_KEY = '$TYE1!eQ3ZH&!9e8aX#I*m@WjgcmQD#$'
