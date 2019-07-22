@@ -1,7 +1,10 @@
 from flask import jsonify, Blueprint, abort
-from flask_restful import (Resource, Api, reqparse, inputs,
-                           fields, marshal, marshal_with, url_for)
 
+from flask_restful import (Resource, Api, reqparse,
+                               inputs, fields, marshal,
+                               marshal_with, url_for)
+
+from auth import auth
 import models
 
 course_fields = {
@@ -10,6 +13,7 @@ course_fields = {
     'url': fields.String,
     'reviews': fields.List(fields.String)
 }
+
 
 def add_reviews(course):
     course.reviews = [url_for('resources.reviews.review', id=review.id)
@@ -24,6 +28,7 @@ def course_or_404(course_id):
         abort(404)
     else:
         return course
+
 
 class CourseList(Resource):
     def __init__(self):
@@ -42,18 +47,21 @@ class CourseList(Resource):
             type=inputs.url
         )
         super().__init__()
-
+        
     def get(self):
         courses = [marshal(add_reviews(course), course_fields)
                    for course in models.Course.select()]
         return {'courses': courses}
     
     @marshal_with(course_fields)
+    @auth.login_required
     def post(self):
         args = self.reqparse.parse_args()
         course = models.Course.create(**args)
-        return (add_reviews(course), 201, 
-                {'Location': url_for('resourses.courses.course', id=course.id)})
+        return (add_reviews(course), 201, {
+                'Location': url_for('resources.courses.course', id=course.id)}
+               )
+
 
 class Course(Resource):
     def __init__(self):
@@ -76,19 +84,21 @@ class Course(Resource):
     @marshal_with(course_fields)
     def get(self, id):
         return add_reviews(course_or_404(id))
-
+    
     @marshal_with(course_fields)
+    @auth.login_required
     def put(self, id):
         args = self.reqparse.parse_args()
         query = models.Course.update(**args).where(models.Course.id==id)
         query.execute()
-        return (add_reviews(models.Course.get(models.Course.id==id)), 200, 
+        return (add_reviews(models.Course.get(models.Course.id==id)), 200,
                 {'Location': url_for('resources.courses.course', id=id)})
-
+    
+    @auth.login_required
     def delete(self, id):
         query = models.Course.delete().where(models.Course.id==id)
         query.execute()
-        return ('', 204, {'Location': url_for('resources.courses.courses')})
+        return '', 204, {'Location': url_for('resources.courses.courses')}
 
 courses_api = Blueprint('resources.courses', __name__)
 api = Api(courses_api)
